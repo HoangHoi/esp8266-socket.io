@@ -3,7 +3,7 @@
 
 #define POWER D3
 #define LED_PIN D4
-#define RESPONSE_LENGTH 500
+#define RESPONSE_LENGTH 1000
 
 const char* ssid = "Tang-4";
 const char* password = "!@#$%^&*o9";
