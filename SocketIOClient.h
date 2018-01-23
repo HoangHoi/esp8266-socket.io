@@ -35,15 +35,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #ifndef SocketIoClient_H
 #define SocketIoClient_H
-#include <vector>
-#include <map>
-#include <WebSocketsClient.h>
+//#include <vector>
+//#include <map>
+//#include <WebSocketsClient.h>
 #include "Arduino.h"
 #define DEBUG true
 
 #ifdef W5100
 #include <Ethernet.h>
-#include <WebSocketsClient.h>
+//#include <WebSocketsClient.h>
 #include "SPI.h"     //For W5100
 #endif
 
