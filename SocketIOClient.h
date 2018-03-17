@@ -62,7 +62,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 // Length of static data buffers
-#define DATA_BUFFER_LEN 2048
+#define DATA_BUFFER_LEN 1024
 #define SID_LEN 24
 
 // prototype for 'on' handlers
@@ -92,8 +92,7 @@ public:
     bool connectHTTP(String thehostname, int port = 80);
     bool connected();
     void disconnect();
-    bool reconnect(String thehostname, int port = 80);
-    bool monitor();
+    void monitor();
     void setAuthToken(String newAuthToken);
    	void begin(const char* host, const int port = DEFAULT_PORT, const char* url = DEFAULT_URL);
     void on(String id, functionPointer f);

@@ -72,8 +72,8 @@ bool SocketIOClient::handshake() {
     if (!beginConnect()) {
         return false;
     }
-    /*ECHO(F("[handshake] Begin send Handshake"));
-    ECHO("[handshake] Server: " + String(hostname));*/
+    ECHO(F("[handshake] Begin send Handshake"));
+    ECHO("[handshake] Server: " + String(hostname));
     sendHandshake();
 
     if (!waitForInput()) {
@@ -81,7 +81,7 @@ bool SocketIOClient::handshake() {
         return false;
     }
 
-    //ECHO(F("[handshake] Read Handshake"));
+    ECHO(F("[handshake] Read Handshake"));
     return readHandshake();
 }
 
@@ -150,7 +150,7 @@ void SocketIOClient::sendRequestAuthenticate() {
     request += F("Content-Length: ");
     request += body.length();
     request += F("\r\n");
-    request += F("Connexion: keep-alive\r\n\r\n");
+    request += F("Connection: keep-alive\r\n\r\n");
     request += body;
     request += "\r\n\r\n";
 
@@ -316,31 +316,6 @@ bool SocketIOClient::connectHTTP(String thehostname, int theport) {
     return true;
 }
 
-bool SocketIOClient::reconnect(String thehostname, int theport) {
-    thehostname.toCharArray(hostname, MAX_HOSTNAME_LEN);
-    port = theport;
-
-    if (!internets.connect(hostname, theport)) {
-        return false;
-    }
-
-    Serial.println("Re Connection established");
-    port = theport;
-    ECHO(F("Dang ket noi toi host: "));
-    ECHO(hostname);
-    ECHO(F("Dang ket noi toi port: "));
-    ECHO(port);
-    bool status;
-    if (handshake() && authenticate() && connectViaSocket()) {
-        status = true;
-    } else {
-        status = false;
-    }
-    ECHO(F("Trang thai cua ket noi la: "));
-    ECHO(status);
-    return status;
-}
-
 bool SocketIOClient::connected() {
     return internets.connected();
 }
@@ -402,32 +377,35 @@ void SocketIOClient::eventHandler(int index) {
     }
 }
 
-bool SocketIOClient::monitor() {
+void SocketIOClient::monitor() {
     int index = -1;
     int index2 = -1;
     String tmp = "";
     *databuffer = 0;
     static unsigned long pingTimer = 0;
 
-    if (!internets.connected()) {
+    if (!connected()) {
         ECHO("[monitor] Client not connected.");
-        if (connect(hostname, port)) {
-            ECHO("[monitor] Connected.");
-            return true;
-        } else {
+        ECHO("[monitor] Reconnect....");
+        stopConnect();
+        if (!connect(hostname, port)) {
             ECHO("[monitor] Can't connect. Aborting.");
+            return;
+        } else {
+            ECHO("[monitor] Reconnected!");
         }
     }
 
     // the PING_INTERVAL from the negotiation phase should be used
     // this is a temporary hack
-    if (internets.connected() && millis() >= pingTimer) {
+    if (connected() && millis() >= pingTimer) {
         heartbeat(0);
+        ECHO("[monitor] Heartbeat");
         pingTimer = millis() + PING_INTERVAL;
     }
 
     if (!internets.available()) {
-        return false;
+        return;
     }
 
     while (internets.available()) { // read availible internets
@@ -443,7 +421,6 @@ bool SocketIOClient::monitor() {
             eventHandler(index2);
         }
     }
-    return false;
 }
 
 void SocketIOClient::sendHandshake() {
@@ -651,11 +628,10 @@ void SocketIOClient::readLine() {
         setCookie(data);
     }
 }
+
 void SocketIOClient::emit(String id, String data) {
     String message = "42[\"" + id + "\"," + data + "]";
     ECHO("[emit] message content" + message);
-    int header[10];
-    header[0] = 0x81;
     int msglength = message.length();
     ECHO("[emit] message length: " + String(msglength));
     randomSeed(analogRead(0));
@@ -670,42 +646,25 @@ void SocketIOClient::emit(String id, String data) {
     }
 
     String request = "";
-    request += String((char) header[0]); // has to be sent for proper communication
+    request += String((char) 0x81); // has to be sent for proper communication
     // Depending on the size of the message
     if (msglength <= 125) {
-        header[1] = msglength + 128;
-        request += String((char) header[1]); //size of the message + 128 because message has to be masked
+        request += String((char) (msglength + 128)); //size of the message + 128 because message has to be masked
     } else if (msglength >= 126 && msglength <= 65535) {
-        header[1] = 126 + 128;
-        request += String((char) header[1]);
-        header[2] = (msglength >> 8) & 255;
-        request += String((char) header[2]);
-        header[3] = (msglength)& 255;
-        request += String((char) header[3]);
+        request += String((char) (126 + 128));
+        request += String((char) ((msglength >> 8) & 255));
+        request += String((char) ((msglength) & 255));
     } else {
-        header[1] = 127 + 128;
-        request += String((char) header[1]);
-        header[2] = (msglength >> 56) & 255;
-        request += String((char) header[2]);
-        header[3] = (msglength >> 48) & 255;
-        request += String((char) header[4]);
-        header[4] = (msglength >> 40) & 255;
-        request += String((char) header[4]);
-        header[5] = (msglength >> 32) & 255;
-        request += String((char) header[5]);
-        header[6] = (msglength >> 24) & 255;
-        request += String((char) header[6]);
-        header[7] = (msglength >> 16) & 255;
-        request += String((char) header[7]);
-        header[8] = (msglength >> 8) & 255;
-        request += String((char) header[8]);
-        header[9] = (msglength)& 255;
-        request += String((char) header[9]);
+        request += String((char) (127 + 128));
+        for (uint8_t i = 0; i >= 8; i = i - 8) {
+            request += String((char) ((msglength >> i) & 255));
+        }
     }
     request += String(mask);
     request += String(masked);
     internets.print(request);
 }
+
 void SocketIOClient::heartbeat(int select) {
     randomSeed(analogRead(0));
     String mask = "";
