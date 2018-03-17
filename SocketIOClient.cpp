@@ -614,7 +614,10 @@ void SocketIOClient::deleteREST(String host, String path) {
 
 void SocketIOClient::readLine() {
     dataptr = databuffer;
-    while (internets.available() != false && (dataptr < &databuffer[DATA_BUFFER_LEN - 2])) {
+    while (dataptr < &databuffer[DATA_BUFFER_LEN - 2]) {
+        if (!internets.available() && !internets.available()) {
+            break;
+        }
         char c = internets.read();
         if (c == '\r') {
             break;
@@ -624,6 +627,7 @@ void SocketIOClient::readLine() {
     }
     *dataptr = 0;
     String data = databuffer;
+    ECHO("[readLine] databuffer: " + data);
     if (data.indexOf("Set-Cookie:") >=0) {
         setCookie(data);
     }
