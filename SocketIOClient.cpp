@@ -383,11 +383,9 @@ void SocketIOClient::eventHandler(int index) {
 }
 
 void SocketIOClient::monitor() {
-    int index = -1;
-    int index2 = -1;
     String tmp = "";
     *databuffer = 0;
-    static unsigned long pingTimer = millis() + PING_INTERVAL;
+    static unsigned long pingTimer = 0;
     static unsigned long pingTimeout = 0;
 
     if (!connected()) {
@@ -430,12 +428,14 @@ void SocketIOClient::monitor() {
     }
 
     while (internets.available()) { // read availible internets
+        int index1 = -1;
+        int index2 = -1;
         readLine();
         tmp = databuffer;
         dataptr = databuffer;
-        index = tmp.indexOf((char) 129); //129 DEC = 0x81 HEX = sent for proper communication
+        index1 = tmp.indexOf((char) 129); //129 DEC = 0x81 HEX = sent for proper communication
         index2 = tmp.indexOf((char) 129, index + 1);
-        if (index != -1) {
+        if (index1 != -1) {
             eventHandler(index);
         }
         if (index2 != -1) {
@@ -660,66 +660,62 @@ void SocketIOClient::readLine() {
 
 void SocketIOClient::emit(String id, String data) {
     String message = "42[\"" + id + "\"," + data + "]";
-    ECHO("[emit] message content" + message);
+    ECHO("[emit] message content: " + message);
     int msglength = message.length();
     ECHO("[emit] message length: " + String(msglength));
+
+    internets.print((char) 0x81);
+    // Depending on the size of the message
+    if (msglength <= 125) {
+        internets.print((char) (msglength + 128)); //size of the message + 128 because message has to be masked
+    } else if (msglength >= 126 && msglength <= 65535) {
+        internets.print((char) (126 + 128));
+        internets.print((char) ((msglength >> 8) & 255));
+        internets.print((char) ((msglength) & 255));
+    } else {
+        internets.print((char) (127 + 128));
+        for (uint8_t i = 0; i >= 8; i = i - 8) {
+            internets.print((char) ((msglength >> i) & 255));
+        }
+    }
+
     randomSeed(analogRead(0));
     String mask = "";
-    String masked = message;
     for (int i = 0; i < 4; i++) {
         char a = random(48, 57);
         mask += a;
-    }
-    for (int i = 0; i < msglength; i++) {
-        masked[i] = message[i] ^ mask[i % 4];
+        internets.print(a);
     }
 
-    String request = "";
-    request += String((char) 0x81); // has to be sent for proper communication
-    // Depending on the size of the message
-    if (msglength <= 125) {
-        request += String((char) (msglength + 128)); //size of the message + 128 because message has to be masked
-    } else if (msglength >= 126 && msglength <= 65535) {
-        request += String((char) (126 + 128));
-        request += String((char) ((msglength >> 8) & 255));
-        request += String((char) ((msglength) & 255));
-    } else {
-        request += String((char) (127 + 128));
-        for (uint8_t i = 0; i >= 8; i = i - 8) {
-            request += String((char) ((msglength >> i) & 255));
-        }
+    for (int i = 0; i < msglength; i++) {
+        internets.print((char) (message[i] ^ mask[i % 4]));
     }
-    request += String(mask);
-    request += String(masked);
-    internets.print(request);
 }
 
 void SocketIOClient::heartbeat(int select) {
     randomSeed(analogRead(0));
     String mask = "";
-    String masked = "";
+    // String masked = "";
     String message = "";
     if (select == 0) {
-        masked = "2";
+        // masked = "2";
         message = "2";
     } else {
-        masked = "3";
+        // masked = "3";
         message = "3";
-    }
-    for (int i = 0; i < 4; i++) { //generate a random mask, 4 bytes, ASCII 0 to 9
-        char a = random(48, 57);
-        mask += a;
-    }
-    for (int i = 0; i < message.length(); i++) {
-        masked[i] = message[i] ^ mask[i % 4]; //apply the "mask" to the message ("2" : ping or "3" : pong)
     }
 
     String request = "";
-    request += String((char) 0x81); //has to be sent for proper communication
-    request += String((char) 129); //size of the message (1) + 128 because message has to be masked
-    request += String(mask);
-    request += String(masked);
-    internets.print(request);
+    internets.print((char) 0x81); //has to be sent for proper communication
+    internets.print((char) 129); //size of the message (1) + 128 because message has to be masked
+    for (int i = 0; i < 4; i++) { //generate a random mask, 4 bytes, ASCII 0 to 9
+        char a = random(48, 57);
+        mask += a;
+        internets.print(a);
+    }
+    for (int i = 0; i < message.length(); i++) {
+        internets.print((char) (message[i] ^ mask[i % 4])); //apply the "mask" to the message ("2" : ping or "3" : pong)
+    }
 }
 
 void SocketIOClient::on(String id, functionPointer function) {

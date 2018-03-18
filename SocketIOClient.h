@@ -75,7 +75,7 @@ typedef void (*functionPointer)(String data);
 #define MAX_HOSTNAME_LEN 128
 
 #define PING_INTERVAL 5000
-#define PING_TIME_OUT 10000
+#define PING_TIME_OUT 20000
 //#define SOCKETIOCLIENT_USE_SSL
 #ifdef SOCKETIOCLIENT_USE_SSL
     #define DEFAULT_PORT 443
