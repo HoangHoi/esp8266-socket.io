@@ -100,7 +100,7 @@ bool SocketIOClient::readHandshake() {
 }
 
 bool SocketIOClient::authenticate() {
-    ECHO(authToken);
+    // ECHO(authToken);
     if (authToken.length() == 0) {
         return true;
     }
@@ -154,9 +154,9 @@ void SocketIOClient::sendRequestAuthenticate() {
     request += body;
     request += "\r\n\r\n";
 
-    ECHO(F("\r\n[sendRequestAuthenticate] Send request........................."));
-    ECHO(request);
-    ECHO(F("[sendRequestAuthenticate] .........................send request done\r\n"));
+    // ECHO(F("\r\n[sendRequestAuthenticate] Send request........................."));
+    // ECHO(request);
+    // ECHO(F("[sendRequestAuthenticate] .........................send request done\r\n"));
     internets.print(request);
 
     // request += "43:42[\"subscribe\",{\"channel\":\"feed-the-fish\"}]\r\n\r\n";
@@ -302,8 +302,8 @@ void SocketIOClient::sendConnectToSocket() {
     request += F("Connection: Upgrade\r\n\r\n");
 
     ECHO(F("\r\n[sendConnectToSocket] Send request........................."));
-    ECHO(request);
-    ECHO(F("[sendConnectToSocket] .........................send request done\r\n"));
+    // ECHO(request);
+    // ECHO(F("[sendConnectToSocket] .........................send request done\r\n"));
     internets.print(request);
 }
 
@@ -405,9 +405,9 @@ void SocketIOClient::monitor() {
 
     if (isPing && millis() >= pingTimeout) {
         ECHO("[monitor] Ping time out!");
-        ECHO(isPing);
-        ECHO(millis());
-        ECHO(pingTimeout);
+        // ECHO(isPing);
+        // ECHO(millis());
+        // ECHO(pingTimeout);
         isPing = false;
         stopConnect();
         return;
@@ -445,7 +445,7 @@ void SocketIOClient::monitor() {
 }
 
 void SocketIOClient::sendHandshake() {
-    ECHO(hostname);
+    // ECHO(hostname);
     String request = "";
     request += F("GET /socket.io/?transport=polling&b64=true HTTP/1.1\r\n");
     if (port == 80) {
@@ -462,8 +462,8 @@ void SocketIOClient::sendHandshake() {
     request += F("Origin: Arduino\r\n");
     request += F("Connexion: keep-alive\r\n\r\n");
     ECHO(F("\r\n[sendHandshake] Send request........................."));
-    ECHO(request);
-    ECHO(F("[sendHandshake] .........................send request done\r\n"));
+    // ECHO(request);
+    // ECHO(F("[sendHandshake] .........................send request done\r\n"));
     internets.print(request);
 }
 
@@ -508,6 +508,7 @@ String SocketIOClient::getREST(String host,int port, String path){
     host.toCharArray(hostname, MAX_HOSTNAME_LEN);
     if (!internets.connect(hostname, port)) {
         ECHO(F("Connect failed"));
+        return String("");
     }
     String request = "";
     request += F("GET /");
@@ -524,19 +525,20 @@ String SocketIOClient::getREST(String host,int port, String path){
     request += F("Connection: keep-alive\r\n\r\n");
 
     ECHO(F("\r\n[getREST] Send request........................."));
-    ECHO(request);
-    ECHO(F("[getREST] .........................send request done\r\n"));
+    // ECHO(request);
+    // ECHO(F("[getREST] .........................send request done\r\n"));
 
     internets.print(request);
     if (!waitForInput()) {
         ECHO(F("[getRest] Time out"));
+        return String("");
     }
     eatHeader();
 
     readLine();
     String tmp = databuffer;
     stopConnect();
-    ECHO(tmp);
+    // ECHO(tmp);
     return tmp;
 }
 
@@ -545,6 +547,7 @@ String SocketIOClient::postREST(String host, int port, String path, String token
     host.toCharArray(hostname, MAX_HOSTNAME_LEN);
     if (!internets.connect(hostname, port)) {
         ECHO(F("Connect failed"));
+        return String("");
     }
 
     String request = "";
@@ -571,12 +574,13 @@ String SocketIOClient::postREST(String host, int port, String path, String token
     request += F("\r\n");
 
     ECHO(F("\r\n[postREST] Send request........................."));
-    ECHO(request);
-    ECHO(F("[postREST] .........................send request done\r\n"));
+    // ECHO(request);
+    // ECHO(F("[postREST] .........................send request done\r\n"));
 
     internets.print(request);
     if (!waitForInput()) {
         ECHO(F("[postRest] Time out"));
+        return String("");
     }
     eatHeader();
     readLine();
@@ -608,8 +612,8 @@ void SocketIOClient::putREST(String host, String path, String type, String data)
     request += F("\r\n");
 
     ECHO(F("\r\n[putREST] Send request........................."));
-    ECHO(request);
-    ECHO(F("[putREST] .........................send request done\r\n"));
+    // ECHO(request);
+    // ECHO(F("[putREST] .........................send request done\r\n"));
     internets.print(request);
 }
 
@@ -628,8 +632,8 @@ void SocketIOClient::deleteREST(String host, String path) {
     request += F("Connection: close\r\n\r\n");
 
     ECHO(F("\r\n[deleteREST] Send request........................."));
-    ECHO(request);
-    ECHO(F("[deleteREST] .........................send request done\r\n"));
+    // ECHO(request);
+    // ECHO(F("[deleteREST] .........................send request done\r\n"));
     internets.print(request);
 }
 
@@ -648,7 +652,7 @@ void SocketIOClient::readLine() {
     }
     *dataptr = 0;
     String data = databuffer;
-    ECHO("[readLine] databuffer: " + data);
+    // ECHO("[readLine] databuffer: " + data);
     if (data.indexOf("Set-Cookie:") >=0) {
         setCookie(data);
     }
