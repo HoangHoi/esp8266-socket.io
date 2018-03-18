@@ -349,6 +349,7 @@ void SocketIOClient::eventHandler(int index) {
             break;
         case '3':
             ECHO("[eventHandler] Pong received - All good");
+            isPing = false;
             break;
         case '4':
             switch (rcvdmsg[1]) {
@@ -382,7 +383,8 @@ void SocketIOClient::monitor() {
     int index2 = -1;
     String tmp = "";
     *databuffer = 0;
-    static unsigned long pingTimer = 0;
+    static unsigned long pingTimer = millis() + PING_INTERVAL;
+    static unsigned long pingTimeout = 0;
 
     if (!connected()) {
         ECHO("[monitor] Client not connected.");
@@ -394,14 +396,29 @@ void SocketIOClient::monitor() {
         } else {
             ECHO("[monitor] Reconnected!");
         }
+        return;
+    }
+
+    if (isPing && millis() >= pingTimeout) {
+        ECHO("[monitor] Ping time out!");
+        ECHO(isPing);
+        ECHO(millis());
+        ECHO(pingTimeout);
+        isPing = false;
+        stopConnect();
+        return;
     }
 
     // the PING_INTERVAL from the negotiation phase should be used
     // this is a temporary hack
-    if (connected() && millis() >= pingTimer) {
+    if (millis() >= pingTimer) {
         heartbeat(0);
-        ECHO("[monitor] Heartbeat");
+        ECHO("[monitor] Send ping");
         pingTimer = millis() + PING_INTERVAL;
+        if (!isPing) {
+            pingTimeout = millis() + PING_TIME_OUT;
+        }
+        isPing = true;
     }
 
     if (!internets.available()) {
