@@ -358,7 +358,11 @@ void SocketIOClient::eventHandler(int index) {
                     break;
                 case '2':
                     rcvdmsg.replace("\\\\", "\\");
-                    id = rcvdmsg.substring(4, rcvdmsg.indexOf("\","));
+                    int endIndex = rcvdmsg.indexOf("\",");
+                    if (endIndex == -1) {
+                        endIndex = rcvdmsg.indexOf("\"]");
+                    }
+                    id = rcvdmsg.substring(4, endIndex);
 
                     ECHO("[eventHandler] id = " + id);
 

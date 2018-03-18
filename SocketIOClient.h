@@ -70,7 +70,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 typedef void (*functionPointer)(String data);
 
 // Maxmimum number of 'on' handlers
-#define MAX_ON_HANDLERS 8
+#define MAX_ON_HANDLERS 10
 
 #define MAX_HOSTNAME_LEN 128
 
