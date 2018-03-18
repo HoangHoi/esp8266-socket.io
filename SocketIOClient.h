@@ -75,6 +75,7 @@ typedef void (*functionPointer)(String data);
 #define MAX_HOSTNAME_LEN 128
 
 #define PING_INTERVAL 5000
+#define PING_TIME_OUT 10000
 //#define SOCKETIOCLIENT_USE_SSL
 #ifdef SOCKETIOCLIENT_USE_SSL
     #define DEFAULT_PORT 443
@@ -129,6 +130,7 @@ private:
     char key[28];
     char hostname[128];
     int port;
+    bool isPing = false;
 
     functionPointer onFunction[MAX_ON_HANDLERS];
     String onId[MAX_ON_HANDLERS];
