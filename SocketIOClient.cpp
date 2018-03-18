@@ -434,9 +434,9 @@ void SocketIOClient::monitor() {
         tmp = databuffer;
         dataptr = databuffer;
         index1 = tmp.indexOf((char) 129); //129 DEC = 0x81 HEX = sent for proper communication
-        index2 = tmp.indexOf((char) 129, index + 1);
+        index2 = tmp.indexOf((char) 129, (index1 + 1));
         if (index1 != -1) {
-            eventHandler(index);
+            eventHandler(index1);
         }
         if (index2 != -1) {
             eventHandler(index2);
