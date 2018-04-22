@@ -69,9 +69,9 @@ HttpClientH::~HttpClientH()
     if(_tcp) {
         _tcp->stop();
     }
-    if(_responseHeaders) {
-        delete[] _responseHeaders;
-    }
+    // if(_responseHeaders) {
+    //     delete[] _responseHeaders;
+    // }
 }
 
 bool HttpClientH::begin(String host) {
@@ -83,6 +83,7 @@ bool HttpClientH::begin(String host, uint16_t port) {
     _port = port;
     _transportTrait.reset(nullptr);
     _transportTrait = (TransportTraitPtr) new TransportTrait();
+    clear();
     return true;
 }
 
@@ -95,6 +96,7 @@ bool HttpClientH::begin(String host, uint16_t port, String httpsFingerprint) {
     }
 
     _transportTrait = (TransportTraitPtr) new TLSTrait(httpsFingerprint);
+    clear();
     return true;
 }
 
@@ -122,7 +124,7 @@ bool HttpClientH::connected()
 
 bool HttpClientH::connect() {
     if(connected()) {
-        ECHO("[HTTP-Client] connect. already connected, try reuse!");
+        ECHO("[HttpClientH] connect. already connected, try reuse!");
         while(_tcp->available() > 0) {
             _tcp->read();
         }
@@ -130,24 +132,24 @@ bool HttpClientH::connect() {
     }
 
     if (!_transportTrait) {
-        ECHO("[HTTP-Client] connect: HTTPClientH::begin was not called or returned error");
+        ECHO("[HttpClientH] connect: HTTPClientH::begin was not called or returned error");
         return false;
     }
 
     _tcp = _transportTrait->create();
     _tcp->setTimeout(_tcpTimeout);
 
-    ECHO(String("[HTTP-Client] Begin connect to: ") + _host + String(":") + String(_port));
+    ECHO(String("[HttpClientH] Begin connect to: ") + _host + String(":") + String(_port));
 
     if(!_tcp->connect(_host.c_str(), _port)) {
-        ECHO("[HTTP-Client] failed connect");
+        ECHO("[HttpClientH] failed connect");
         return false;
     }
 
-    ECHO("[HTTP-Client] connected");
+    ECHO("[HttpClientH] connected");
 
     if (!_transportTrait->verify(*_tcp, _host.c_str())) {
-        ECHO("[HTTP-Client] transport level verify failed");
+        ECHO("[HttpClientH] transport level verify failed");
         _tcp->stop();
         return false;
     }
@@ -161,23 +163,20 @@ bool HttpClientH::connect() {
 
 int HttpClientH::sendRequest(String path, const char * method, String payload) {
     size_t payloadSize = payload.length();
-    return sendRequest(path, method, (uint8_t *) payload.c_str(), payloadSize);
-}
-
-int HttpClientH::sendRequest(String path, const char * method, uint8_t * payload, size_t payloadSize) {
     if(!connect()) {
         return returnError(HTTPC_ERROR_CONNECTION_REFUSED);
     }
 
-    ECHO("[HTTP-Client][sendRequest] Begin send header");
+    ECHO("[HttpClientH][sendRequest] Begin send request");
     // send Header
     if(!sendHeader(path, method, payloadSize)) {
         return returnError(HTTPC_ERROR_SEND_HEADER_FAILED);
     }
 
     // send Payload if needed
-    if(payload && payloadSize > 0) {
-        if(_tcp->write(&payload[0], payloadSize) != payloadSize) {
+    if(payloadSize > 0) {
+        ECHO(payload);
+        if(_tcp->write((const uint8_t *) payload.c_str(), payloadSize) != payloadSize) {
             return returnError(HTTPC_ERROR_SEND_PAYLOAD_FAILED);
         }
     }
@@ -197,8 +196,9 @@ bool HttpClientH::sendHeader(String path, const char * method, size_t payloadSiz
     header += F("\r\nCookie: ");
     header += _cookies;
     header += F("\r\nAccept: application/json");
-    header += F("\r\nX-CSRF-TOKEN: ");
-    header += _token;
+    header += F("\r\nContent-Type: application/json");
+    // header += F("\r\nX-CSRF-TOKEN: ");
+    // header += _token;
     header += F("\r\nConnection: ");
     if(_reuse) {
         header += F("keep-alive");
@@ -210,9 +210,13 @@ bool HttpClientH::sendHeader(String path, const char * method, size_t payloadSiz
         header += String(payloadSize);
     }
 
-    header += _headers;
-
-    header += "\r\n\r\n";
+    if (_headers.length() > 0) {
+        header += "\r\n";
+        header += _headers;
+        header += "\r\n";
+    } else {
+        header += "\r\n\r\n";
+    }
 
     if(!connected()) {
         return HTTPC_ERROR_NOT_CONNECTED;
@@ -295,23 +299,23 @@ int HttpClientH::handleHeaderResponse() {
                     transferEncoding = headerValue;
                 }
 
-                for(size_t i = 0; i < _responseHeadersCount; i++) {
-                    if(_responseHeaders[i].key.equalsIgnoreCase(headerName)) {
-                        _responseHeaders[i].value = headerValue;
-                        break;
-                    }
-                }
+                // for(size_t i = 0; i < _responseHeadersCount; i++) {
+                //     if(_responseHeaders[i].key.equalsIgnoreCase(headerName)) {
+                //         _responseHeaders[i].value = headerValue;
+                //         break;
+                //     }
+                // }
             }
 
             if(headerLine == "") {
-                ECHO(String("[HTTP-Client][handleHeaderResponse] code: ") + String(_responseCode));
+                ECHO(String("[HttpClientH][handleHeaderResponse] code: ") + String(_responseCode));
 
                 if(_size > 0) {
-                    ECHO(String("[HTTP-Client][handleHeaderResponse] size: ") + String(_size));
+                    ECHO(String("[HttpClientH][handleHeaderResponse] size: ") + String(_size));
                 }
 
                 if(transferEncoding.length() > 0) {
-                    ECHO(String("[HTTP-Client][handleHeaderResponse] Transfer-Encoding: ") + String(transferEncoding.c_str()));
+                    ECHO(String("[HttpClientH][handleHeaderResponse] Transfer-Encoding: ") + String(transferEncoding.c_str()));
                     if(transferEncoding.equalsIgnoreCase("chunked")) {
                         _transferEncoding = HTTPC_TE_CHUNKED;
                     } else {
@@ -324,7 +328,7 @@ int HttpClientH::handleHeaderResponse() {
                 if(_responseCode) {
                     return _responseCode;
                 } else {
-                    ECHO("[HTTP-Client][handleHeaderResponse] Remote host is not an HTTP Server!");
+                    ECHO("[HttpClientH][handleHeaderResponse] Remote host is not an HTTP Server!");
                     return HTTPC_ERROR_NO_HTTP_SERVER;
                 }
             }
@@ -378,7 +382,7 @@ String HttpClientH::getResponseString()
     if(_size) {
         // try to reserve needed memmory
         if(!sstring.reserve((_size + 1))) {
-            ECHO(String("[HTTP-Client][getString] not enough memory to reserve a string! need: ") + String(_size + 1));
+            ECHO(String("[HttpClientH][getString] not enough memory to reserve a string! need: ") + String(_size + 1));
             return "";
         }
     }
@@ -431,7 +435,7 @@ int HttpClientH::writeToStream(Stream * stream)
             // read size of chunk
             len = (uint32_t) strtol((const char *) chunkHeader.c_str(), NULL, 16);
             size += len;
-            ECHO(String("[HTTP-Client] read chunk len: ") + String(len));
+            ECHO(String("[HttpClientH] read chunk len: ") + String(len));
 
             // data left?
             if(len > 0) {
@@ -480,19 +484,19 @@ void HttpClientH::end()
 {
     if(connected()) {
         if(_tcp->available() > 0) {
-            ECHO(String("[HTTP-Client][end] still data in buffer (") + String(_tcp->available()) + String("), clean up."));
+            ECHO(String("[HttpClientH][end] still data in buffer (") + String(_tcp->available()) + String("), clean up."));
             while(_tcp->available() > 0) {
                 _tcp->read();
             }
         }
         if(_reuse && _canReuse) {
-            ECHO("[HTTP-Client][end] tcp keep open for reuse");
+            ECHO("[HttpClientH][end] tcp keep open for reuse");
         } else {
-            ECHO("[HTTP-Client][end] tcp stop");
+            ECHO("[HttpClientH][end] tcp stop");
             _tcp->stop();
         }
     } else {
-        ECHO("[HTTP-Client][end] tcp is closed");
+        ECHO("[HttpClientH][end] tcp is closed");
     }
 }
 
@@ -547,7 +551,7 @@ int HttpClientH::writeToStreamDataBlock(Stream * stream, int size)
                 // are all Bytes a writen to stream ?
                 if(bytesWrite != bytesRead) {
                     ECHO(
-                        String("[HTTP-Client][writeToStream] short write asked for ") +
+                        String("[HttpClientH][writeToStream] short write asked for ") +
                         String(bytesRead) +
                         String(" but got ") +
                         String(bytesWrite) +
@@ -557,7 +561,7 @@ int HttpClientH::writeToStreamDataBlock(Stream * stream, int size)
                     // check for write error
                     if(stream->getWriteError()) {
                         ECHO(
-                            String("[HTTP-Client][writeToStreamDataBlock] stream write error ") +
+                            String("[HttpClientH][writeToStreamDataBlock] stream write error ") +
                             String(stream->getWriteError())
                         );
 
@@ -577,7 +581,7 @@ int HttpClientH::writeToStreamDataBlock(Stream * stream, int size)
                     if(bytesWrite != leftBytes) {
                         // failed again
                         ECHO(
-                            String("[HTTP-Client][writeToStream] short write asked for ") +
+                            String("[HttpClientH][writeToStream] short write asked for ") +
                             String(leftBytes) + String(" but got ") + String(bytesWrite) + String(" failed.")
                         );
                         free(buff);
@@ -587,7 +591,7 @@ int HttpClientH::writeToStreamDataBlock(Stream * stream, int size)
 
                 // check for write error
                 if(stream->getWriteError()) {
-                    ECHO(String("[HTTP-Client][writeToStreamDataBlock] stream write error ") + String(stream->getWriteError()));
+                    ECHO(String("[HttpClientH][writeToStreamDataBlock] stream write error ") + String(stream->getWriteError()));
                     free(buff);
                     return HTTPC_ERROR_STREAM_WRITE;
                 }
@@ -605,15 +609,15 @@ int HttpClientH::writeToStreamDataBlock(Stream * stream, int size)
 
         free(buff);
 
-        ECHO(String("[HTTP-Client][writeToStreamDataBlock] connection closed or file end (written: ") + String(bytesWritten) + String(")."));
+        ECHO(String("[HttpClientH][writeToStreamDataBlock] connection closed or file end (written: ") + String(bytesWritten) + String(")."));
 
         if((size > 0) && (size != bytesWritten)) {
-            ECHO(String("[HTTP-Client][writeToStreamDataBlock] bytesWritten ") + String(bytesWritten) + String(" and size ") + String(size) + String(" mismatch!"));
+            ECHO(String("[HttpClientH][writeToStreamDataBlock] bytesWritten ") + String(bytesWritten) + String(" and size ") + String(size) + String(" mismatch!"));
             return HTTPC_ERROR_STREAM_WRITE;
         }
 
     } else {
-        ECHO(String("[HTTP-Client][writeToStreamDataBlock] too less ram! need ") + String(HTTP_TCP_BUFFER_SIZE));
+        ECHO(String("[HttpClientH][writeToStreamDataBlock] too less ram! need ") + String(HTTP_TCP_BUFFER_SIZE));
         return HTTPC_ERROR_TOO_LESS_RAM;
     }
 
@@ -627,9 +631,9 @@ int HttpClientH::getResponseCode() {
 int HttpClientH::returnError(int error)
 {
     if(error < 0) {
-        ECHO(String("[HTTP-Client][returnError] error") + String(error));
+        ECHO(String("[HttpClientH][returnError] error") + String(error));
         if(connected()) {
-            ECHO("[HTTP-Client][returnError] tcp stop\n");
+            ECHO("[HttpClientH][returnError] tcp stop\n");
             _tcp->stop();
         }
     }
@@ -642,7 +646,7 @@ int HttpClientH::get(String path) {
 }
 
 int HttpClientH::post(String path, String payload) {
-
+    return sendRequest(path, "POST", payload);
 }
 
 void HttpClientH::printFreeHeap() {

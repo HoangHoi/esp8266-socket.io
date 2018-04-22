@@ -30,7 +30,8 @@
                 "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/cores/esp8266",
                 "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/libraries/ESP8266WiFi/src",
                 "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/tools/sdk/include",
-                "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/variants/d1_mini"
+                "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/variants/d1_mini",
+                "/home/hoanghoi/Arduino/libraries/ArduinoJson/src"
             ],
             "defines": [],
             "intelliSenseMode": "clang-x64",
@@ -41,7 +42,9 @@
                     "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/cores",
                     "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/variants",
                     "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/tools/sdk/include",
-                    "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/tools/sdk/libc"
+                    "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/tools/sdk/libc",
+                    "/home/hoanghoi/Arduino/libraries",
+                    "/home/hoanghoi/.arduino15/packages/esp8266/tools/xtensa-lx106-elf-gcc/1.20.0-26-gb404fb9-2/xtensa-lx106-elf/include"
                 ],
                 "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": ""

@@ -121,15 +121,14 @@ public:
     void addHeader(const String& name, const String& value);
 
 protected:
-    struct Argument {
-        String key;
-        String value;
-    };
+    // struct Argument {
+    //     String key;
+    //     String value;
+    // };
 
     bool connect();
     bool connected();
-    int sendRequest(String path, const char *  method, String payload);
-    int sendRequest(String path, const char * method = "GET", uint8_t * payload = NULL, size_t payloadSize = 0);
+    int sendRequest(String path, const char *  method = "GET", String payload = "");
     bool sendHeader(String path, const char * method, size_t payloadSize);
     int returnError(int error);
 
@@ -152,16 +151,15 @@ protected:
     String _cookies = "";
     // size_t _cookiesCount = 0;
 
-    String _token = "";
+    // String _token = "";
 
     int _responseCode = 0;
     int _size = -1;
     bool _canReuse = false;
 
-    Argument* _responseHeaders = nullptr;
-    size_t           _responseHeadersCount = 0;
+    // Argument* _responseHeaders = nullptr;
+    // size_t           _responseHeadersCount = 0;
     transferEncoding_t _transferEncoding = HTTPC_TE_IDENTITY;
 };
-
 
 #endif /* HttpClientH_H_ */
