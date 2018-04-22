@@ -30,6 +30,6 @@ void setup() {
 }
 
 void loop() {
-    http.get("/");
+    http.get("/session");
     Serial.println(http.getResponseString());
 }

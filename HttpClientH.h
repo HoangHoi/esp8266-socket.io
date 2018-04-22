@@ -118,6 +118,7 @@ public:
 
     String getResponseString();
     int getResponseCode();
+    void addHeader(const String& name, const String& value);
 
 protected:
     struct Argument {
@@ -147,8 +148,7 @@ protected:
     uint16_t _port = 0;
     bool _reuse = true;
     uint16_t _tcpTimeout = HTTPCLIENT_DEFAULT_TCP_TIMEOUT;
-    Argument* _headers = nullptr;
-    size_t _headersCount = 0;
+    String _headers = "";
     String _cookies = "";
     // size_t _cookiesCount = 0;
 

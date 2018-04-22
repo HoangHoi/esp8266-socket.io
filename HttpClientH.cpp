@@ -106,7 +106,10 @@ void HttpClientH::clear()
 {
     _responseCode = 0;
     _size = -1;
-    _headers = nullptr;
+    _headers = "";
+    _cookies = "";
+    _canReuse = false;
+    end();
 }
 
 bool HttpClientH::connected()
@@ -207,6 +210,8 @@ bool HttpClientH::sendHeader(String path, const char * method, size_t payloadSiz
         header += String(payloadSize);
     }
 
+    header += _headers;
+
     header += "\r\n\r\n";
 
     if(!connected()) {
@@ -215,6 +220,35 @@ bool HttpClientH::sendHeader(String path, const char * method, size_t payloadSiz
 
     ECHO(header);
     return (_tcp->write((const uint8_t *) header.c_str(), header.length()) == header.length());
+}
+
+/**
+ * adds Header to the request
+ * @param name
+ * @param value
+ */
+void HttpClientH::addHeader(const String& name, const String& value)
+{
+    // not allow set of Header handled by code
+    if(!name.equalsIgnoreCase(F("Connection")) &&
+       !name.equalsIgnoreCase(F("User-Agent")) &&
+       !name.equalsIgnoreCase(F("Host")) &&
+       !(name.equalsIgnoreCase(F("Authorization")))
+    ){
+
+        String headerLine = name;
+        headerLine += ": ";
+
+        int headerStart = _headers.indexOf(headerLine);
+        if (headerStart != -1) {
+            int headerEnd = _headers.indexOf('\n', headerStart);
+            _headers = _headers.substring(0, headerStart) + _headers.substring(headerEnd + 1);
+        }
+
+        headerLine += value;
+        headerLine += "\r\n";
+        _headers = headerLine + _headers;
+    }
 }
 
 int HttpClientH::handleHeaderResponse() {
