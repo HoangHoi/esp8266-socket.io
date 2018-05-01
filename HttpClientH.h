@@ -4,6 +4,7 @@
 #include <memory>
 #include <Arduino.h>
 #include <WiFiClient.h>
+#include "TransportTrait.h"
 
 #define HTTPCLIENT_DEFAULT_TCP_TIMEOUT (5000)
 
@@ -92,9 +93,6 @@ typedef enum {
     HTTPC_TE_CHUNKED
 } transferEncoding_t;
 
-class TransportTrait;
-typedef std::unique_ptr<TransportTrait> TransportTraitPtr;
-
 class HttpClientH
 {
 public:
@@ -106,12 +104,10 @@ public:
     bool begin(String host, uint16_t port, String httpsFingerprint);
 
     void setFingerprint(String httpsFingerprint);
+    void setReuse(bool reuse);
 
     void clear();
     void end();
-
-
-    void setReuse(bool reuse);
 
     int get(String path);
     int post(String path, String payload);

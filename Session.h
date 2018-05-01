@@ -2,6 +2,7 @@
 #define SESSION_H_
 
 #include <HttpClientH.h>
+#include <SessionConfig.h>
 
 // Request status
 #define REQUEST_OK (1)
@@ -18,16 +19,7 @@
 
 #define DEBUG
 
-#define HOST "device.garage.lc"
-#define PORT 80
-
-#define SESSION_PATH "/session"
-#define LOGIN_PATH "/session/login"
-#define LOGOUT_PATH "/session/logout"
-#define AUTH_TOKEN_PATH "/session/auth-token"
-#define CONNECT_TO_USER_PATH "/connect-user/"
-
-#define JSON_BUFFER_LENGTH 1024
+#define JSON_BUFFER_LENGTH 1460
 
 class Session
 {
