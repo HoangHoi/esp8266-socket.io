@@ -35,7 +35,7 @@ void setup() {
     Serial.begin(115200);
     setupNetwork();
     socket.begin(HOST, PORT);
-    socket.on("abc", abcHandle);
+    // socket.on("abc", abcHandle);
     socket.connect();
 }
 

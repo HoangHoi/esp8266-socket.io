@@ -1,9 +1,14 @@
 #include <ESP8266WiFi.h>
 #include <HttpClientH.h>
 #include <Session.h>
+#include <SocketIOClient2.h>
+
+#define HOST "device.garage.lc"
+#define PORT 3000
 
 HttpClientH http;
 Session session;
+SocketIOClient2 socket;
 
 const char* ssid = "Tang-4";
 const char* password = "!@#$%^&*o9";
@@ -37,10 +42,15 @@ void setup() {
 
     Serial.print("Auth token: ");
     Serial.println(session.getAuthToken());
+
+    socket.begin(HOST, PORT);
+    socket.setAuthToken(session.getAuthToken());
+    socket.connect();
     // session.connectUser("1");
     // session.logout();
     // session.getSession();
 }
 
 void loop() {
+    socket.monitor();
 }
