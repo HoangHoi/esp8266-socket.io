@@ -765,45 +765,68 @@ void SocketIOClient2::monitor()
 
 int SocketIOClient2::readMessageLength()
 {
-    // char c = _tcp->read();
+    unsigned long lastDataTime = millis();
+    int big = 0;
 
-    size_t sizeAvailable = _tcp->available();
-    while (sizeAvailable) {
-        char c = _tcp->read();
-        if (c == (char) 0x81) {
-            ECHO("[SocketIOClient2][eventHandler] Begin handle event");
+    while(isConnected()) {
+        // get available data size
+        size_t sizeAvailable = _tcp->available();
+        if(sizeAvailable) {
+            char byteRead = _tcp->read();
+            lastDataTime = millis();
+
+            if (byteRead == (char) 126 && big == 0) {
+                big = -1;
+                continue;
+            }
+
+            if (byteRead == (char) 127 && big == 0) {
+                return -1;
+            }
+
+            if (big < 0) {
+                big = ((int) byteRead) << 8;
+            }
+
+            return big | byteRead;
+        } else {
+            if((millis() - lastDataTime) > _tcpTimeout) {
+                return HTTPC_ERROR_READ_TIMEOUT;
+            }
+            delay(1);
         }
-        Serial.print(c);
-        Serial.print(" ");
-        Serial.print(c, DEC);
-        Serial.print(" ");
-        Serial.println(c, HEX);
-        sizeAvailable = _tcp->available();
     }
 
-    return 1;
-    // switch (c) {
-    //     case ((char) (126 + 128)):
-    //         return 1;
-    //         break;
-    //     case ((char) (127 + 128)):
-    //         return 1;
-    //         break;
-    //     default:
-    //         return (c - 128);
-    // }
+    return handleError(HTTPC_ERROR_NOT_CONNECTED);
 }
 
 void SocketIOClient2::eventHandler()
 {
+    if (!isConnected()) {
+        ECHO("[SocketIOClient2][eventHandler] Client not connected.");
+        ECHO("[SocketIOClient2][eventHandler] Reconnect....");
+        return;
+    }
+    // _size = readMessageLength();
+
+
     size_t sizeAvailable = _tcp->available();
     if (!sizeAvailable) {
         return;
     }
 
+    char c = _tcp->read();
+    if (c != (char) 0x81) {
+        ECHO(String("[SocketIOClient2][eventHandler] Clear data: ") + String(c));
+    }
 
     ECHO("[SocketIOClient2][eventHandler] Begin handle event");
-    ECHO(readMessageLength());
+    _size = readMessageLength();
+    ECHO("MESSAGE SIZE");
+    ECHO(_size);
+    String data = getResponseString();
+    ECHO(data);
+
 
     // String messageLengthString = _tcp->readStringUntil(':');
     // ECHO("messageLengthString");
