@@ -65,10 +65,17 @@ int SocketIOClient2::heartbeat(int select)
         payload += (char) (message[i] ^ mask[i % 4]); //apply the "mask" to the message ("2" : ping or "3" : pong)
     }
 
+    return sendDataToTcp(payload);
+}
+
+int SocketIOClient2::sendDataToTcp(String payload)
+{
     size_t payloadSize = payload.length();
     if(_tcp->write((const uint8_t *) payload.c_str(), payloadSize) != payloadSize) {
-        return handleError(HTTPC_ERROR_SEND_HEARTBEAT_FAILED);
+        return handleError(SOCKET_ERROR_SEND_DATA_FAILED);
     }
+
+    return RETURN_OK;
 }
 
 bool SocketIOClient2::begin(String host) {
@@ -172,7 +179,8 @@ void SocketIOClient2::setAuthToken(String authToken)
     _authToken = authToken;
 }
 
-void SocketIOClient2::setCookie(String cookie) {
+void SocketIOClient2::setCookie(String cookie)
+{
     int p = cookie.indexOf('=');
     int q = cookie.indexOf(';');
     if(p < 1 || q < 1 || p > q) {
@@ -519,7 +527,8 @@ int SocketIOClient2::writeToStreamDataBlock(Stream * stream, int size)
     return bytesWritten;
 }
 
-bool SocketIOClient2::connect() {
+bool SocketIOClient2::connect()
+{
     ECHO(F("Connect to host: "));
     ECHO(_host);
     ECHO(F("Connect to port: "));
@@ -579,6 +588,7 @@ int SocketIOClient2::connectViaSocket()
         return handleError(HTTPC_ERROR_SEND_PAYLOAD_FAILED);
     }
     _canReuse = true;
+    _pingTimer = millis() + PING_INTERVAL;
     return RETURN_OK;
 }
 
@@ -683,7 +693,8 @@ bool SocketIOClient2::isConnected()
     return false;
 }
 
-bool SocketIOClient2::tcpConnect() {
+bool SocketIOClient2::tcpConnect()
+{
     if(isConnected()) {
         ECHO("[SocketIOClient2] connect. already connected, try reuse!");
         while(_tcp->available() > 0) {
@@ -735,6 +746,7 @@ void SocketIOClient2::monitor()
         //     ECHO("[SocketIOClient2][monitor] Reconnected!");
         // }
         clear();
+        connect();
         return;
     }
 
@@ -761,6 +773,47 @@ void SocketIOClient2::monitor()
     }
 
     eventHandler();
+}
+
+int SocketIOClient2::emit(String id, String data) {
+    String message = "42[\"" + id + "\"," + data + "]";
+    ECHO("[emit] message content: " + message);
+    int msglength = message.length();
+    ECHO("[emit] message length: " + String(msglength));
+
+    String payload = String((char) 0x81);
+    // Depending on the size of the message
+    if (msglength <= 125) {
+        payload += ((char) (msglength + 128)); //size of the message + 128 because message has to be masked
+    } else if (msglength >= 126 && msglength <= 65535) {
+        payload += ((char) (126 + 128));
+        payload += ((char) ((msglength >> 8) & 255));
+        payload += ((char) ((msglength) & 255));
+    } else {
+        payload += ((char) (127 + 128));
+        for (uint8_t i = 0; i >= 8; i = i - 8) {
+            payload += ((char) ((msglength >> i) & 255));
+        }
+    }
+
+    randomSeed(analogRead(0));
+    String mask = "";
+    for (int i = 0; i < 4; i++) {
+        char a = random(48, 57);
+        mask += a;
+    }
+
+    payload += mask;
+
+    for (int i = 0; i < msglength; i++) {
+        payload += ((char) (message[i] ^ mask[i % 4]));
+    }
+
+    if(!isConnected()) {
+        return handleError(HTTPC_ERROR_NOT_CONNECTED);
+    }
+
+    return sendDataToTcp(payload);
 }
 
 int SocketIOClient2::readMessageLength()
@@ -807,8 +860,6 @@ void SocketIOClient2::eventHandler()
         ECHO("[SocketIOClient2][eventHandler] Reconnect....");
         return;
     }
-    // _size = readMessageLength();
-
 
     size_t sizeAvailable = _tcp->available();
     if (!sizeAvailable) {
@@ -818,6 +869,7 @@ void SocketIOClient2::eventHandler()
     char c = _tcp->read();
     if (c != (char) 0x81) {
         ECHO(String("[SocketIOClient2][eventHandler] Clear data: ") + String(c));
+        return;
     }
 
     ECHO("[SocketIOClient2][eventHandler] Begin handle event");
@@ -827,66 +879,64 @@ void SocketIOClient2::eventHandler()
     String data = getResponseString();
     ECHO(data);
 
+    switch (data[0]) {
+        case '2':
+            ECHO("[eventHandler] Ping received - Sending Pong");
+            heartbeat(1);
+            break;
+        case '3':
+            ECHO("[eventHandler] Pong received - All good");
+            _isPing = false;
+            break;
+        case '4':
+            runEventFunction(data);
+            break;
+        default: handleError(SOCKET_ERROR_UNKNOWN_MESSAGE_TYPE);
+    }
+}
 
-    // String messageLengthString = _tcp->readStringUntil(':');
-    // ECHO("messageLengthString");
-    // ECHO(messageLengthString);
+void SocketIOClient2::checkMessageType(String data)
+{
+    switch (data[1]) {
+        case '0':
+            ECHO("[SocketIOClient2][runEventFunction] Upgrade to WebSocket confirmed");
+            break;
+        case '2':
+            runEventFunction(data.substring(2));
+            break;
+        default: handleError(SOCKET_ERROR_UNKNOWN_MESSAGE_TYPE);
+    }
+}
 
-    // String id = "";
-    // String data = "";
-    // String rcvdmsg = "";
-    // int sizemsg = databuffer[index + 1]; // 0-125 byte, index ok Fix provide by Galilei11. Thanks
-    // if (databuffer[index + 1] > 125) {
-    //     sizemsg = databuffer[index + 2]; // 126-255 byte
-    //     index += 1; // index correction to start
-    // }
+void SocketIOClient2::runEventFunction(String data)
+{
+    data.replace("\\\\", "\\");
+    ECHO(data);
+    FREE_HEAP();
+    StaticJsonBuffer<JSON_BUFFER_LENGTH> jsonBuffer;
+    FREE_HEAP();
+    JsonArray& root = jsonBuffer.parseArray(data.c_str());
+    if (!root.success()) {
+        handleError(ERROR_PARSE_JSON_ERROR);
+        return;
+    }
 
-    // ECHO("[eventHandler] Message size = " + String(sizemsg));
+    String id = root[0];
+    String receiverData = root[1];
 
-    // for (int i = index + 2; i < index + sizemsg + 2; i++) {
-    //     rcvdmsg += (char) databuffer[i];
-    // }
+    ECHO("[SocketIOClient2][runEventFunction] id = " + id);
 
-    // ECHO("[eventHandler] Received message = " + String(rcvdmsg));
+    ECHO("[SocketIOClient2][runEventFunction] data = " + receiverData);
 
-    // switch (rcvdmsg[0]) {
-    //     case '2':
-    //         ECHO("[eventHandler] Ping received - Sending Pong");
-    //         heartbeat(1);
-    //         break;
-    //     case '3':
-    //         ECHO("[eventHandler] Pong received - All good");
-    //         isPing = false;
-    //         break;
-    //     case '4':
-    //         switch (rcvdmsg[1]) {
-    //             case '0':
-    //                 ECHO("[eventHandler] Upgrade to WebSocket confirmed");
-    //                 break;
-    //             case '2':
-    //                 rcvdmsg.replace("\\\\", "\\");
-    //                 int endIndex = rcvdmsg.indexOf("\",");
-    //                 if (endIndex == -1) {
-    //                     endIndex = rcvdmsg.indexOf("\"]");
-    //                 }
-    //                 id = rcvdmsg.substring(4, endIndex);
-
-    //                 ECHO("[eventHandler] id = " + id);
-
-    //                 data = rcvdmsg.substring(2);
-    //                 ECHO("[eventHandler] data = " + data);
-
-    //                 ECHO(onIndex);
-    //                 for (uint8_t i = 0; i < onIndex; i++) {
-    //                     ECHO(onId[i]);
-    //                     if (id == onId[i]) {
-    //                         ECHO("[eventHandler] Found handler = " + String(i));
-    //                         (*onFunction[i])(data);
-    //                     }
-    //                 }
-    //                 break;
-    //         }
-    // }
+    for (uint8_t i = 0; i < _onIndex; i++) {
+        ECHO(_onId[i]);
+        if (id == _onId[i]) {
+            ECHO("[SocketIOClient2][eventHandler] Found handler = " + String(i));
+            (*_onFunction[i])(receiverData);
+            return;
+        }
+    }
+    handleError(SOCKET_ERROR_ON_ID_NOT_MATCH);
 }
 
 int SocketIOClient2::handleError(int error)

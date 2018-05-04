@@ -52,11 +52,17 @@
 #define SOCKET_ERROR_AUTH_TOKEN_NOT_FOUND   (-16)
 #define SOCKET_ERROR_UPGRADE_FAILED         (-17)
 #define SOCKET_ERROR_TCP_NOT_AVAIABLE       (-18)
+#define SOCKET_ERROR_SEND_DATA_FAILED       (-19)
+#define SOCKET_ERROR_UNKNOWN_MESSAGE_TYPE   (-20)
+#define SOCKET_ERROR_ON_ID_NOT_MATCH        (-21)
+
+/// Socket error
 
 // #define SOCKET_ERROR_UNDEFIENED_PACKET_LENGTH        (-12)
 
 #define ERROR_PARSE_JSON_ERROR              (-40)
 #define UNKNOWN_ERROR                       (-41)
+#define TOO_MANY_ON_FUNCTION                (-42)
 
 #define SOCKET_AUTHENTICATE_OK_STRING        "ok"
 
@@ -70,8 +76,6 @@ typedef enum {
     SOCKET_BINARY_ACK = 6
 } t_socket_codes;
 
-/// Socket error
-#define TOO_MANY_ON_FUNCTION        (-12)
 
 #define HANDSHAKE_URL "/socket.io/?transport=polling&b64=true"
 #define UPDATE_URL "/socket.io/?EIO=3&transport=polling&sid="
@@ -108,7 +112,7 @@ public:
     void monitor();
    	// void begin(const char* host, const int port = DEFAULT_PORT, const char* url = DEFAULT_URL);
     int on(String id, functionPointer f);
-    // void emit(String id, String data);
+    int emit(String id, String data);
     int heartbeat(int select);
 private:
     std::unique_ptr<WiFiClient> _tcp;
@@ -164,7 +168,9 @@ private:
     int readMessageLength();
 
     void eventHandler();
-
+    void checkMessageType(String data);
+    void runEventFunction(String data);
+    int sendDataToTcp(String payload);
     int handleError(int error);
     int handleHttpError(int error);
 };
