@@ -20,6 +20,7 @@
 #define JSON_BUFFER_LENGTH 1460
 
 #define PING_INTERVAL 5000
+#define RECONNECT_INTERVAL 5000
 #define PING_TIME_OUT 20000
 #define DEFAULT_FINGERPRINT ""
 
@@ -144,6 +145,7 @@ private:
     int _pingTimeout = PING_TIME_OUT;
     String _secWebSocketAccept = "";
     unsigned long _pingTimer = 0;
+    unsigned long _reconnectTimer = 0;
     unsigned long _lastPingTimeout = 0;
     bool _isPing = false;
 

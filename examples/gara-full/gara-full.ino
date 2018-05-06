@@ -6,7 +6,7 @@
 #include <SocketIOClient.h>
 #include <ArduinoJson.h>
 #include <ESP8266httpUpdate.h>
-#include <SerialCommand.h>
+// #include <SerialCommand.h>
 
 #define PIN_RESET 2
 #define PIN_CONTROL D5  //GPI14

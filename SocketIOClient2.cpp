@@ -736,25 +736,19 @@ bool SocketIOClient2::tcpConnect()
 void SocketIOClient2::monitor()
 {
     if (!isConnected()) {
-        ECHO("[SocketIOClient2][monitor] Client not connected.");
-        ECHO("[SocketIOClient2][monitor] Reconnect....");
-        // stopConnect();
-        // if (!connect(hostname, port)) {
-        //     ECHO("[SocketIOClient2][monitor] Can't connect. Aborting.");
-        //     return;
-        // } else {
-        //     ECHO("[SocketIOClient2][monitor] Reconnected!");
-        // }
-        clear();
-        connect();
+        if (millis() >= _reconnectTimer) {
+            ECHO("[SocketIOClient2][monitor] Reconnect....");
+            clearRequest();
+            clearResponse();
+            stop();
+            connect();
+            _reconnectTimer = millis() + RECONNECT_INTERVAL;
+        }
         return;
     }
 
     if (_isPing && millis() >= _lastPingTimeout) {
         ECHO("[SocketIOClient2][monitor] Ping time out!");
-        // ECHO(isPing);
-        // ECHO(millis());
-        // ECHO(pingTimeout);
         _isPing = false;
         clear();
         return;
@@ -827,6 +821,7 @@ int SocketIOClient2::readMessageLength()
         if(sizeAvailable) {
             char byteRead = _tcp->read();
             lastDataTime = millis();
+            // Serial.println(byteRead, DEC);
 
             if (byteRead == (char) 126 && big == 0) {
                 big = -1;
@@ -839,6 +834,7 @@ int SocketIOClient2::readMessageLength()
 
             if (big < 0) {
                 big = ((int) byteRead) << 8;
+                continue;
             }
 
             return big | byteRead;
@@ -902,7 +898,7 @@ void SocketIOClient2::checkMessageType(String data)
             ECHO("[SocketIOClient2][runEventFunction] Upgrade to WebSocket confirmed");
             break;
         case '2':
-            runEventFunction(data.substring(2));
+            runEventFunction(data);
             break;
         default: handleError(SOCKET_ERROR_UNKNOWN_MESSAGE_TYPE);
     }
@@ -910,12 +906,12 @@ void SocketIOClient2::checkMessageType(String data)
 
 void SocketIOClient2::runEventFunction(String data)
 {
-    data.replace("\\\\", "\\");
+    //data.replace("\\\\", "\\");
     ECHO(data);
     FREE_HEAP();
     StaticJsonBuffer<JSON_BUFFER_LENGTH> jsonBuffer;
     FREE_HEAP();
-    JsonArray& root = jsonBuffer.parseArray(data.c_str());
+    JsonArray& root = jsonBuffer.parseArray(data.substring(2).c_str());
     if (!root.success()) {
         handleError(ERROR_PARSE_JSON_ERROR);
         return;

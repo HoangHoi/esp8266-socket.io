@@ -31,7 +31,14 @@
                 "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/libraries/ESP8266WiFi/src",
                 "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/tools/sdk/include",
                 "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/variants/d1_mini",
-                "/home/hoanghoi/Arduino/libraries/ArduinoJson/src"
+                "/home/hoanghoi/Arduino/libraries/ArduinoJson/src",
+                "/home/hoanghoi/Arduino/libraries/Arduino-SerialCommand-master",
+                "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/libraries/ESP8266httpUpdate/src",
+                "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/libraries/ArduinoOTA",
+                "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/libraries/EEPROM",
+                "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/libraries/ESP8266WebServer/src",
+                "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/libraries/ESP8266mDNS",
+                "/home/hoanghoi/.arduino15/packages/esp8266/hardware/esp8266/2.4.1/libraries/ESP8266HTTPClient/src"
             ],
             "defines": [],
             "intelliSenseMode": "clang-x64",
